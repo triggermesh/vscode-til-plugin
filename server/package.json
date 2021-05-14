@@ -1,0 +1,28 @@
+{
+    "name": "vscode-bridge-dl-server",
+    "description": "TriggerMesh bridge description language server",
+    "author": "The TriggerMesh Team",
+    "license": "MIT",
+    "version": "1.0.0",
+    "engines": {
+        "node": "*"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/TriggerMesh/vscode-bridge-dl"
+    },
+    "dependencies": {
+        "vscode-languageserver": "^7.0.0",
+        "vscode-languageserver-textdocument": "^1.0.1"
+    },
+    "devDependencies": {
+        "pegjs": "^0.10.0",
+        "ts-pegjs": "^0.3.1"
+    },
+    "scripts": {
+        "build-parser": "tspegjs -o src/hcl/parser.ts --custom-header-file src/hcl/parser_header.ts --allowed-start-rules SourceUnit --cache src/hcl/grammar.pegjs",
+        "transpile": "tsc",
+        "build": "npm run build-parser && npm run transpile",
+        "prepare": "npm run build"
+    }
+}

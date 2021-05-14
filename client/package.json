@@ -1,0 +1,18 @@
+{
+    "name": "vscode-bridge-dl-client",
+    "description": "VS client extension for TriggerMesh bridge description language server",
+    "author": "The TriggerMesh Team",
+    "license": "MIT",
+    "version": "1.0.0",
+    "publisher": "???",
+    "engines": {
+        "vscode": "^1.55.0"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^7.0.0"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.56.0",
+        "vscode-test": "^1.5.2"
+    }
+}
