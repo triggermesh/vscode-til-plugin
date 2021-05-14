@@ -32,7 +32,12 @@ export function activate(context: ExtensionContext): void {
         }
     };
 
-    client = new LanguageClient("hclServer", "HCL Language Server", serverOptions, clientOptions);
+    client = new LanguageClient(
+        "vscode-bridge-dl",
+        "TriggerMesh bridge description language",
+        serverOptions,
+        clientOptions
+    );
 
     client.start();
 }

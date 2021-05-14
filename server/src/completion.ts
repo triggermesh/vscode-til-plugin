@@ -4,29 +4,29 @@ import { FileLevelSuggestor, SourceAwsS3Suggestor, Suggestor, ToSuggestor } from
 
 type AstNodeOffsetInclusionChecker = (offset: number, range: Range) => boolean;
 
-const offsetExclusiveChecker: AstNodeOffsetInclusionChecker = (offset, range) => {
+const offsetBoundsExclusive: AstNodeOffsetInclusionChecker = (offset, range) => {
     return range.start.offset < offset && offset < range.end.offset;
 };
 
-const offsetInclusiveChecker: AstNodeOffsetInclusionChecker = (offset, range) => {
+const offsetBoundsInclusive: AstNodeOffsetInclusionChecker = (offset, range) => {
     return range.start.offset <= offset && offset <= range.end.offset;
 };
 
 const offsetInclusionCheckers: Map<AstNodeType, AstNodeOffsetInclusionChecker> = new Map([
-    [AstNodeType.SourceUnit, offsetInclusiveChecker],
-    [AstNodeType.Block, offsetInclusiveChecker],
-    [AstNodeType.Body, offsetExclusiveChecker],
-    [AstNodeType.Attribute, offsetInclusiveChecker],
-    [AstNodeType.Identifier, offsetInclusiveChecker],
-    [AstNodeType.NullLiteral, offsetInclusiveChecker],
-    [AstNodeType.BooleanLiteral, offsetInclusiveChecker],
-    [AstNodeType.NumberLiteral, offsetInclusiveChecker],
-    [AstNodeType.StringLiteral, offsetInclusiveChecker],
-    [AstNodeType.Tuple, offsetExclusiveChecker],
-    [AstNodeType.Object, offsetExclusiveChecker],
-    [AstNodeType.IndexAccess, offsetInclusiveChecker],
-    [AstNodeType.AttributeAccess, offsetInclusiveChecker],
-    [AstNodeType.FunctionCall, offsetInclusiveChecker]
+    [AstNodeType.SourceUnit, offsetBoundsInclusive],
+    [AstNodeType.Block, offsetBoundsInclusive],
+    [AstNodeType.Body, offsetBoundsExclusive],
+    [AstNodeType.Attribute, offsetBoundsInclusive],
+    [AstNodeType.Identifier, offsetBoundsInclusive],
+    [AstNodeType.NullLiteral, offsetBoundsInclusive],
+    [AstNodeType.BooleanLiteral, offsetBoundsInclusive],
+    [AstNodeType.NumberLiteral, offsetBoundsInclusive],
+    [AstNodeType.StringLiteral, offsetBoundsInclusive],
+    [AstNodeType.Tuple, offsetBoundsExclusive],
+    [AstNodeType.Object, offsetBoundsExclusive],
+    [AstNodeType.IndexAccess, offsetBoundsInclusive],
+    [AstNodeType.AttributeAccess, offsetBoundsInclusive],
+    [AstNodeType.FunctionCall, offsetBoundsInclusive]
 ]);
 
 const suggestors: Suggestor[] = [

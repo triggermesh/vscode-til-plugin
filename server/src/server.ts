@@ -15,11 +15,8 @@ import {
 import { CompletionService } from "./completion";
 import { AnyAstNode, hclToLspRange, parse, semanticCheck, SourceUnit, SyntaxError } from "./hcl";
 
-// Create a connection for the server, using Node's IPC as a transport.
-// Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
 
-// Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 let hasConfigurationCapability = false;
@@ -180,11 +177,7 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] =
     const offset = document.offsetAt(params.position);
     const unit = documentAsts.get(params.textDocument.uri);
 
-    if (unit === undefined) {
-        return [];
-    }
-
-    return completionService.complete(offset, unit);
+    return unit === undefined ? [] : completionService.complete(offset, unit);
 });
 
 connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
