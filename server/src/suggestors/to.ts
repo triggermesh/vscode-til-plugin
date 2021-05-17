@@ -1,5 +1,5 @@
 import { CompletionItem, CompletionItemKind } from "vscode-languageserver/node";
-import { AnyAstNode, Attribute, Block, Identifier, SourceUnit } from "../hcl";
+import { AnyAstNode, Attribute, Block, Body, Identifier, SourceUnit } from "../hcl";
 import { Suggestor } from "./utils";
 
 export class ToSuggestor implements Suggestor {
@@ -49,6 +49,7 @@ export class ToSuggestor implements Suggestor {
         return current.getClosestParentBySelector(
             (node) =>
                 node instanceof Attribute &&
+                node.parent instanceof Body &&
                 (node.name.name === "to" || node.name.name === "reply_to")
         );
     }

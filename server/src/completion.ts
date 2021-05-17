@@ -1,6 +1,6 @@
 import { CompletionItem } from "vscode-languageserver/node";
 import { AnyAstNode, AstNodeType, Range, SourceUnit } from "./hcl";
-import { FileLevelSuggestor, SourceAwsS3Suggestor, Suggestor, ToSuggestor } from "./suggestors";
+import { BlocksSuggestor, FileLevelSuggestor, Suggestor, ToSuggestor } from "./suggestors";
 
 type AstNodeOffsetInclusionChecker = (offset: number, range: Range) => boolean;
 
@@ -31,7 +31,7 @@ const offsetInclusionCheckers: Map<AstNodeType, AstNodeOffsetInclusionChecker> =
 
 const suggestors: Suggestor[] = [
     new FileLevelSuggestor(),
-    new SourceAwsS3Suggestor(),
+    new BlocksSuggestor(),
     new ToSuggestor()
 ];
 
