@@ -13,20 +13,22 @@ export class BlockPartsSuggestor implements Suggestor {
         const closest = nodes[0];
         const block = this.getClosestBlockNode(closest) as Block;
 
-        if (block === undefined || block.labels.length === 0) {
+        if (block === undefined) {
             return undefined;
         }
 
+        const scopedSchemas = this.getScopedSchemas(block, schemas);
+
         if (closest === block.type) {
-            return this.suggestTypes(closest);
+            return this.suggestTypes(closest, scopedSchemas);
         }
 
         if (closest === block.labels[0]) {
-            return this.suggestKinds(block, closest);
+            return this.suggestKinds(block, closest, scopedSchemas);
         }
 
         if (closest === block.body || closest.parent === block.body) {
-            return this.suggestMissingMembers(block);
+            return this.suggestMissingMembers(block, scopedSchemas);
         }
 
         return undefined;
@@ -36,14 +38,51 @@ export class BlockPartsSuggestor implements Suggestor {
         return current.getClosestParentBySelector((node) => node instanceof Block);
     }
 
-    private getMatchedSchema(block: Block): BlockSchema | undefined {
-        const firstLabel = block.labels[0];
+    private getScopedSchemas(
+        block: Block,
+        schemas: readonly BlockSchema[]
+    ): readonly BlockSchema[] {
+        const parents = block.getParentsBySelector<Block>((node) => node instanceof Block);
 
+        let result: readonly BlockSchema[] = schemas;
+
+        while (parents.length) {
+            const parent = parents.pop();
+
+            if (parent === undefined) {
+                break;
+            }
+
+            const schema = this.matchSchema(parent, result);
+
+            if (schema === undefined || schema.members === undefined) {
+                break;
+            }
+
+            result = schema.members.filter(
+                (member) => !(member instanceof Array)
+            ) as readonly BlockSchema[];
+
+            if (result.length === 0) {
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    private matchSchema(block: Block, schemas: readonly BlockSchema[]): BlockSchema | undefined {
         const type = block.type.name;
-        const kind = firstLabel instanceof Identifier ? firstLabel.name : firstLabel.value;
+        const firstLabel = block.labels.length > 0 ? block.labels[0] : undefined;
+
+        let kind: string | undefined;
+
+        if (firstLabel) {
+            kind = firstLabel instanceof Identifier ? firstLabel.name : firstLabel.value;
+        }
 
         for (const schema of schemas) {
-            if (schema.type === type && schema.kind === kind) {
+            if (schema.type === type && (!schema.kindNeeded || schema.kind === kind)) {
                 return schema;
             }
         }
@@ -65,7 +104,10 @@ export class BlockPartsSuggestor implements Suggestor {
         });
     }
 
-    private suggestTypes(currentType: Identifier): CompletionItem[] | undefined {
+    private suggestTypes(
+        currentType: Identifier,
+        schemas: readonly BlockSchema[]
+    ): CompletionItem[] | undefined {
         const candidates: string[] = [];
 
         for (const schema of schemas) {
@@ -88,7 +130,8 @@ export class BlockPartsSuggestor implements Suggestor {
 
     private suggestKinds(
         block: Block,
-        currentKind: Identifier | StringLiteral
+        currentKind: Identifier | StringLiteral,
+        schemas: readonly BlockSchema[]
     ): CompletionItem[] | undefined {
         const type = block.type.name;
         const candidates: string[] = [];
@@ -115,8 +158,11 @@ export class BlockPartsSuggestor implements Suggestor {
         }));
     }
 
-    private suggestMissingMembers(block: Block): CompletionItem[] | undefined {
-        const schema = this.getMatchedSchema(block);
+    private suggestMissingMembers(
+        block: Block,
+        schemas: readonly BlockSchema[]
+    ): CompletionItem[] | undefined {
+        const schema = this.matchSchema(block, schemas);
 
         if (schema === undefined || schema.members === undefined) {
             return undefined;
