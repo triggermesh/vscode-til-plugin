@@ -2,7 +2,7 @@
 // @ts-nocheck
 
 import {
-    SourceUnit,
+    ConfigFile,
     Block,
     Body,
     Attribute,

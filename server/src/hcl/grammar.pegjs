@@ -7,13 +7,13 @@
 // Entry
 // ==========================
 
-SourceUnit
-    = __ nodes: ((Attribute / Block) __)* {
-        return new SourceUnit(nextId(), location(), nodes.map((b) => b[0]));
+ConfigFile
+    = __ nodes: ((Attribute / Block / Identifier) __)* {
+        return new ConfigFile(nextId(), location(), nodes.map((b) => b[0]));
     }
 
-Block
-    = type: Identifier __ labels: ((Identifier / StringLiteral) __)* __ body: Body {
+Block "block"
+    = type: Identifier _ labels: ((Identifier / StringLiteral) _)* _ body: Body {
         return new Block(
             nextId(),
             location(),
@@ -23,17 +23,22 @@ Block
         );
     }
 
-Body
+Body "body"
     = "{" __ members: ((Block / Attribute / Identifier) __)* __ "}" {
         return new Body(nextId(), location(), members.map((m) => m[0]));
     }
 
-Attribute
-    = name: Identifier __ "=" __ value: Expression {
-        return new Attribute(nextId(), location(), name, value);
+Attribute "attribute"
+    = name: Identifier _ "=" _ value: Expression? {
+        return new Attribute(
+            nextId(),
+            location(),
+            name,
+            value === null ? undefined : value
+        );
     }
 
-Expression
+Expression "expression"
     = NullLiteral
     / NumberLiteral
     / BooleanLiteral
@@ -48,7 +53,7 @@ IdentifierStart
 IdentifierTrail
     = [a-zA-Z0-9_-]
 
-Identifier
+Identifier "identifier"
     = !(Keyword !IdentifierTrail) IdentifierStart IdentifierTrail* {
         return new Identifier(nextId(), location(), text());
     }
@@ -65,7 +70,7 @@ AnyChar
 NoLineEndChars
     = (!EOL AnyChar)
 
-EOLF "end of line or file"
+EOLF
     = EOL / EOF
 
 EOL "end of line"
@@ -74,7 +79,7 @@ EOL "end of line"
 EOF "end of file"
     = !AnyChar { return ""; }
 
-PrimitiveWhiteSpace "whitespace"
+WhiteSpace "whitespace"
     = "\t"
     / "\v"
     / "\f"
@@ -83,24 +88,16 @@ PrimitiveWhiteSpace "whitespace"
     / "\uFEFF"
     / Zs
 
-WhiteSpace "whitespace"
-    = PrimitiveWhiteSpace
-    / EOL
-
-LineTerminatorSequence "end of line"
-    = "\n"
-    / "\r\n"
-    / "\r"
-    / "\u2028"
-    / "\u2029"
+_
+    = (WhiteSpace / Comment) *
 
 __
-  = (WhiteSpace / Comment)*
+    = (WhiteSpace / EOL / Comment)*
 
 // Comments
 // =========================
 
-Comment
+Comment "comment"
     = LineComment / BlockComment
 
 LineComment
@@ -173,7 +170,7 @@ NumberLiteral =
 // =========================
 
 StringLiteral
-    = literal: (SingleQuotedString / DoubleQuotedString / HereDocumentString) {
+    = literal: (DoubleQuotedString / HereDocumentString) {
         return new StringLiteral(
             nextId(),
             location(),
@@ -181,16 +178,6 @@ StringLiteral
             literal.terminator
         );
     }
-
-SingleQuotedString
-    = "'" chars: SingleQuotedStringChar* "'" {
-        return { value: chars.join("") };
-    }
-
-SingleQuotedStringChar
-    = !("'" / "\\" / EOL) AnyChar { return text(); }
-    / "\\" sequence: EscapeSequence { return sequence; }
-    / LineContinuation
 
 DoubleQuotedString
     = '"' chars: DoubleQuotedStringChar* '"' {
@@ -203,7 +190,7 @@ DoubleQuotedStringChar
     / LineContinuation
 
 LineContinuation
-    = "\\" LineTerminatorSequence { return ""; }
+    = "\\" EOL { return ""; }
 
 EscapeSequence
     = CharEscapeSequence
@@ -297,7 +284,7 @@ ObjectElement
 
 ObjectElements =
     head: (ObjectElement)
-    tail: (__ "," __ ObjectElement)* {
+    tail: (__ "," __ ObjectElement)* (__ ",")? {
         return tail.reduce(
             (accumulator, element) => {
                 accumulator.push(element[3]);
@@ -315,7 +302,7 @@ Object
 
 ArgumentList =
     head: (Expression)
-    tail: (__ "," __ expr: Expression)* {
+    tail: (__ "," __ expr: Expression)* (__ ("," / "..."))? {
         return tail.reduce(
             (accumulator, element) => {
                 accumulator.push(element[3]);
@@ -330,7 +317,7 @@ MemberAccess =
     head: Identifier
     tail: (
         "." attribute: (Identifier / Expression)? { return { attribute: attribute === null ? undefined : attribute }; }
-        / "[" __ index: Expression? __ "]" { return { index: index === null ? undefined : index }; }
+        / "[" _ index: Expression? _ "]" { return { index: index === null ? undefined : index }; }
         / "(" __ args: ArgumentList? __ ")" { return { arguments: args === null ? [] : args }; }
     )* {
         return tail.reduce(

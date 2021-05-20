@@ -25,34 +25,16 @@
             ]
         },
         "block": {
+            "begin": "(([\\w-]+)((\\s+[\\w-]+)|(\\s+\"[^\"]*\"))*)\\s*\\{",
+            "beginCaptures": {
+                "1": { "name": "storage.type.hcl" }
+            },
+            "end": "\\}",
+            "name": "meta.block.hcl",
             "patterns" : [
-                {
-                    "begin": "([\\w-]+)\\s*\\{",
-                    "beginCaptures": {
-                        "1": { "name": "storage.type.block.hcl" }
-                    },
-                    "end": "\\}",
-                    "name": "meta.block.hcl",
-                    "patterns" : [
-                        { "include": "$self" },
-                        { "include": "#comment" },
-                        { "include": "#attribute" }
-                    ]
-                },
-                {
-                    "begin": "([\\w-]+)((?:\\s*\"[^\"]*\")*)\\s*\\{",
-                    "beginCaptures": {
-                        "1": { "name": "storage.type.block.hcl" },
-                        "2": { "name": "string.quoted.double.hcl" }
-                    },
-                    "end": "\\}",
-                    "name": "meta.block.hcl",
-                    "patterns" : [
-                        { "include": "$self" },
-                        { "include": "#comment" },
-                        { "include": "#attribute" }
-                    ]
-                }
+                { "include": "$self" },
+                { "include": "#comment" },
+                { "include": "#attribute" }
             ]
         },
         "attribute" : {

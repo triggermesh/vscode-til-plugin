@@ -4,109 +4,36 @@ import {
     InsertTextFormat,
     InsertTextMode
 } from "vscode-languageserver/node";
-import { AnyAstNode, Attribute, Block, Body, Identifier } from "../hcl";
+import { AnyAstNode, Identifier, ConfigFile } from "../hcl";
+import { BlockSchema, schemas } from "../schema";
 import { Suggestor } from "./utils";
 
-interface BlockSchema {
-    type: string;
-    kind: string;
-    attributes: { [name: string]: string };
-    documentation?: string;
+interface SnippetParts {
+    kind?: string[];
 }
 
-const schemas: BlockSchema[] = [
-    {
-        type: "source",
-        kind: "aws_s3",
-        attributes: {
-            arn: 'arn = "$1"',
-            event_types: "event_types = [\n\t$1\n]",
-            access_key: 'access_key = "$1"',
-            secret_key: 'secret_key = "$1"',
-            to: "to = router."
-        }
-    },
-    {
-        type: "source",
-        kind: "azure_blob_storage",
-        attributes: {
-            storage_account_id: 'storage_account_id = "$1"',
-            event_hub_id: 'event_hub_id = "$1"',
-            event_types: "event_types = [\n\t$1\n]",
-            auth: 'auth = "$1"',
-            to: "to = router."
-        }
-    },
-    {
-        type: "target",
-        kind: "slack",
-        attributes: {
-            auth: 'auth = "$1"'
-        }
-    },
-    {
-        type: "target",
-        kind: "kafka",
-        attributes: {
-            topic: 'topic = "$1"'
-        }
-    },
-    {
-        type: "target",
-        kind: "container",
-        attributes: {
-            image: 'image = "$1"',
-            public: "public = ${1|true,false|}"
-        }
-    },
-    {
-        type: "transformer",
-        kind: "function",
-        attributes: {
-            runtime: 'runtime = "$1"',
-            public: "public = ${1|true,false|}",
-            code: "code = <<EOF\n$1\nEOF\n",
-            entrypoint: 'entrypoint = "$1"',
-            to: "to = target."
-        }
-    }
-];
-
 export class BlocksSuggestor implements Suggestor {
-    match(nodes: AnyAstNode[]): boolean {
+    suggest(nodes: AnyAstNode[]): CompletionItem[] | undefined {
         const closest = nodes[0];
-        const block = this.getClosestBlockNode(closest);
 
-        return (
-            block !== undefined &&
-            block.labels.length > 1 &&
-            (closest === block.body || closest.parent === block.body)
-        );
-    }
+        if (
+            !(
+                closest instanceof ConfigFile ||
+                (closest instanceof Identifier && closest.parent instanceof ConfigFile)
+            )
+        ) {
+            return undefined;
+        }
 
-    suggest(nodes: AnyAstNode[]): CompletionItem[] {
-        const closest = nodes[0];
-        const block = this.getClosestBlockNode(closest) as Block;
-        const schema = this.getMatchedSchema(block);
-
+        const mapping = this.createSchemaMapping(schemas);
         const result: CompletionItem[] = [];
 
-        if (schema === undefined) {
-            return result;
-        }
-
-        const definedAttrs = this.getDefinedAttrs(block.body);
-
-        for (const [key, value] of Object.entries(schema.attributes)) {
-            if (definedAttrs.includes(key)) {
-                continue;
-            }
-
+        for (const [name, parts] of mapping.entries()) {
             result.push({
-                label: key,
-                kind: CompletionItemKind.Property,
+                label: name,
+                kind: CompletionItemKind.Class,
 
-                insertText: value,
+                insertText: this.buildSnippet(name, parts),
                 insertTextFormat: InsertTextFormat.Snippet,
                 insertTextMode: InsertTextMode.adjustIndentation
             });
@@ -115,36 +42,49 @@ export class BlocksSuggestor implements Suggestor {
         return result;
     }
 
-    private getClosestBlockNode(current: AnyAstNode): Block | undefined {
-        return current.getClosestParentBySelector((node) => node instanceof Block);
-    }
-
-    private getMatchedSchema(block: Block): BlockSchema | undefined {
-        const firstLabel = block.labels[0];
-
-        const type = block.type.name;
-        const kind = firstLabel instanceof Identifier ? firstLabel.name : firstLabel.value;
+    private createSchemaMapping(schemas: readonly BlockSchema[]): Map<string, SnippetParts> {
+        const result = new Map<string, SnippetParts>();
 
         for (const schema of schemas) {
-            if (schema.type === type && schema.kind === kind) {
-                return schema;
+            const parts = result.get(schema.type);
+
+            if (parts) {
+                if (parts.kind && schema.kind && !parts.kind.includes(schema.kind)) {
+                    parts.kind.push(schema.kind);
+                }
+            } else {
+                const kind: string[] | undefined = schema.kindNeeded ? [] : undefined;
+
+                if (kind && schema.kind) {
+                    kind.push(schema.kind);
+                }
+
+                result.set(schema.type, { kind });
             }
         }
 
-        return undefined;
+        return result;
     }
 
-    private getDefinedAttrs(node: Body): string[] {
-        return node.members.map((member) => {
-            if (member instanceof Attribute) {
-                return member.name.name;
-            }
+    private buildSnippet(type: string, parts: SnippetParts): string {
+        const fragments: string[] = [type];
 
-            if (member instanceof Block) {
-                return member.type.name;
-            }
+        let index = 1;
 
-            return member.name;
-        });
+        if (parts.kind) {
+            const options = parts.kind.map((option) => `"${option}"`).join(",");
+
+            fragments.push(options.length ? `\${${index}|${options}|}` : `\${${index}:type}`);
+
+            index++;
+        }
+
+        fragments.push(`\${${index}:name}`);
+
+        index++;
+
+        fragments.push("{}");
+
+        return fragments.join(" ");
     }
 }

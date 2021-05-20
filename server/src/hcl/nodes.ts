@@ -25,7 +25,7 @@ export function hclToLspRange(range: Range): LspRange {
 }
 
 export enum AstNodeType {
-    SourceUnit = "SourceUnit",
+    ConfigFile = "ConfigFile",
     Block = "Block",
     Body = "Body",
     Attribute = "Attribute",
@@ -252,11 +252,11 @@ export class AstNode<T extends AstNodeType> {
     }
 }
 
-export class SourceUnit extends AstNode<AstNodeType.SourceUnit> {
-    nodes: Array<Attribute | Block>;
+export class ConfigFile extends AstNode<AstNodeType.ConfigFile> {
+    nodes: Array<Attribute | Block | Identifier>;
 
     constructor(id: number, location: Range, nodes: Array<Attribute | Block>) {
-        super(id, AstNodeType.SourceUnit, location);
+        super(id, AstNodeType.ConfigFile, location);
 
         this.nodes = nodes;
 
@@ -312,9 +312,9 @@ export class Body extends AstNode<AstNodeType.Body> {
 
 export class Attribute extends AstNode<AstNodeType.Attribute> {
     name: Identifier;
-    value: Expression;
+    value?: Expression;
 
-    constructor(id: number, location: Range, name: Identifier, value: Expression) {
+    constructor(id: number, location: Range, name: Identifier, value?: Expression) {
         super(id, AstNodeType.Attribute, location);
 
         this.name = name;
@@ -324,7 +324,13 @@ export class Attribute extends AstNode<AstNodeType.Attribute> {
     }
 
     getChildren(): readonly AnyAstNode[] {
-        return [this.name, this.value];
+        const result: AnyAstNode[] = [this.name];
+
+        if (this.value) {
+            result.push(this.value);
+        }
+
+        return result;
     }
 }
 
@@ -499,6 +505,6 @@ export type Expression =
     | FunctionCall
     | Identifier;
 
-export type AnyAstNode = SourceUnit | Block | Body | Attribute | Expression;
+export type AnyAstNode = ConfigFile | Block | Body | Attribute | Expression;
 
 // const node = new StringLiteral(1, { start: {column: 0, line: 0, offset: 0}, end: {column: 0, line: 0, offset: 0}}, "1");

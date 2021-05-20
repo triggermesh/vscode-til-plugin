@@ -1,25 +1,20 @@
 import { CompletionItem, CompletionItemKind } from "vscode-languageserver/node";
-import { AnyAstNode, Attribute, Block, Body, Identifier, SourceUnit } from "../hcl";
+import { AnyAstNode, Attribute, Block, Body, Identifier, ConfigFile } from "../hcl";
 import { Suggestor } from "./utils";
 
 export class ToSuggestor implements Suggestor {
-    match(nodes: AnyAstNode[]): boolean {
-        const attribute = this.getClosestAttributeNode(nodes[0]);
+    suggest(nodes: AnyAstNode[]): CompletionItem[] | undefined {
+        const closest = nodes[0];
+        const attribute = this.getClosestAttributeNode(closest);
 
-        return attribute !== undefined && nodes[0] !== attribute.name;
-    }
-
-    suggest(nodes: AnyAstNode[]): CompletionItem[] {
-        const attribute = this.getClosestAttributeNode(nodes[0]);
-
-        if (attribute === undefined) {
-            return [];
+        if (attribute === undefined || nodes[0] === attribute.name) {
+            return undefined;
         }
 
-        const unit = nodes[0].getRoot() as SourceUnit;
+        const file = closest.getRoot() as ConfigFile;
         const candidates: string[] = [];
 
-        for (const child of unit.getChildren()) {
+        for (const child of file.getChildren()) {
             if (!(child instanceof Block && child.labels.length > 1)) {
                 continue;
             }
@@ -35,14 +30,21 @@ export class ToSuggestor implements Suggestor {
             candidates.push(candidate);
         }
 
-        return candidates.map((candidate) => ({
-            label: candidate,
-            kind: CompletionItemKind.Property,
-            textEdit: {
-                range: attribute.value.getLspRange(),
-                newText: candidate
+        return candidates.map((candidate) => {
+            const item: CompletionItem = {
+                label: candidate,
+                kind: CompletionItemKind.Property
+            };
+
+            if (attribute.value) {
+                item.textEdit = {
+                    range: attribute.value.getLspRange(),
+                    newText: candidate
+                };
             }
-        }));
+
+            return item;
+        });
     }
 
     private getClosestAttributeNode(current: AnyAstNode): Attribute | undefined {

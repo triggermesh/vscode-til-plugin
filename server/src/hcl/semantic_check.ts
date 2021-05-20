@@ -4,12 +4,13 @@ import {
     AstWalkCallback,
     AstWalkOrder,
     AstWalkPolicy,
+    Attribute,
     AttributeAccess,
     Body,
+    ConfigFile,
     FunctionCall,
     Identifier,
-    IndexAccess,
-    SourceUnit
+    IndexAccess
 } from "./nodes";
 
 export interface SemanticIssue {
@@ -19,6 +20,17 @@ export interface SemanticIssue {
 
 interface SemanticChecker {
     check(node: AnyAstNode): SemanticIssue | SemanticIssue[] | undefined;
+}
+
+class AttributeChecker implements SemanticChecker {
+    check(node: Attribute): SemanticIssue | SemanticIssue[] | undefined {
+        if (node.value === undefined) {
+            return {
+                node,
+                message: "Missing attribute value"
+            };
+        }
+    }
 }
 
 class AttributeAccessChecker implements SemanticChecker {
@@ -44,7 +56,7 @@ class IndexAccessChecker implements SemanticChecker {
 }
 
 class FunctionCallChecker implements SemanticChecker {
-    supported = new Set(["file", "secret_name"]);
+    supported = new Set(["file", "secret_name", "secret_ref"]);
 
     check(node: FunctionCall): SemanticIssue | SemanticIssue[] | undefined {
         if (!(node.base instanceof Identifier && this.supported.has(node.base.name))) {
@@ -58,17 +70,17 @@ class FunctionCallChecker implements SemanticChecker {
     }
 }
 
-class BodyChecker implements SemanticChecker {
-    check(node: Body): SemanticIssue[] | undefined {
+class IdentifierChecker implements SemanticChecker {
+    check(node: Identifier): SemanticIssue[] | undefined {
         const issues = [];
 
-        for (const member of node.members) {
-            if (member instanceof Identifier) {
-                issues.push({
-                    node: member,
-                    message: "Incomplete block or attribute"
-                });
-            }
+        const parent = node.parent;
+
+        if (parent instanceof ConfigFile || parent instanceof Body) {
+            issues.push({
+                node,
+                message: "Incomplete block or attribute"
+            });
         }
 
         return issues;
@@ -76,13 +88,14 @@ class BodyChecker implements SemanticChecker {
 }
 
 const semanticCheckers = new Map<AstNodeType, SemanticChecker>([
+    [AstNodeType.Attribute, new AttributeChecker()],
     [AstNodeType.AttributeAccess, new AttributeAccessChecker()],
     [AstNodeType.IndexAccess, new IndexAccessChecker()],
     [AstNodeType.FunctionCall, new FunctionCallChecker()],
-    [AstNodeType.Body, new BodyChecker()]
+    [AstNodeType.Identifier, new IdentifierChecker()]
 ]);
 
-export function semanticCheck(unit: SourceUnit): SemanticIssue[] {
+export function semanticCheck(file: ConfigFile): SemanticIssue[] {
     const issues: SemanticIssue[] = [];
     const callback: AstWalkCallback = (node) => {
         const checker = semanticCheckers.get(node.nodeType);
@@ -98,7 +111,7 @@ export function semanticCheck(unit: SourceUnit): SemanticIssue[] {
         }
     };
 
-    unit.walk(callback, AstWalkPolicy.Inclusive, AstWalkOrder.ChildrenFirst);
+    file.walk(callback, AstWalkPolicy.Inclusive, AstWalkOrder.ChildrenFirst);
 
     return issues;
 }

@@ -13,7 +13,7 @@ import {
     TextDocumentSyncKind
 } from "vscode-languageserver/node";
 import { CompletionService } from "./completion";
-import { AnyAstNode, hclToLspRange, parse, semanticCheck, SourceUnit, SyntaxError } from "./hcl";
+import { AnyAstNode, hclToLspRange, parse, semanticCheck, ConfigFile, SyntaxError } from "./hcl";
 
 const connection = createConnection(ProposedFeatures.all);
 
@@ -84,7 +84,7 @@ const defaultSettings: Settings = { maxNumberOfProblems: 100 };
 let globalSettings: Settings = defaultSettings;
 
 const documentSettings: Map<string, Thenable<Settings>> = new Map();
-const documentAsts: Map<string, SourceUnit> = new Map();
+const documentAsts: Map<string, ConfigFile> = new Map();
 
 const completionService = new CompletionService();
 
@@ -132,11 +132,11 @@ async function processDocument(textDocument: TextDocument): Promise<void> {
     const diagnostics: Diagnostic[] = [];
 
     try {
-        const unit = parse(source);
+        const file = parse(source);
 
-        documentAsts.set(textDocument.uri, unit);
+        documentAsts.set(textDocument.uri, file);
 
-        const issues = semanticCheck(unit).slice(0, settings.maxNumberOfProblems);
+        const issues = semanticCheck(file).slice(0, settings.maxNumberOfProblems);
 
         diagnostics.push(
             ...issues.map((issue) => ({
@@ -176,9 +176,9 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] =
     }
 
     const offset = document.offsetAt(params.position);
-    const unit = documentAsts.get(params.textDocument.uri);
+    const file = documentAsts.get(params.textDocument.uri);
 
-    return unit === undefined ? [] : completionService.complete(offset, unit);
+    return file === undefined ? [] : completionService.complete(offset, file);
 });
 
 connection.onCompletionResolve((item: CompletionItem): CompletionItem => {

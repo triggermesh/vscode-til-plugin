@@ -6,5 +6,5 @@ export * from "./semantic_check";
 export { SyntaxError };
 
 export function parse(source: string): any {
-    return execParser(source, { startRule: AstNodeType.SourceUnit });
+    return execParser(source, { startRule: AstNodeType.ConfigFile });
 }

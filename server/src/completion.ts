@@ -1,6 +1,6 @@
 import { CompletionItem } from "vscode-languageserver/node";
-import { AnyAstNode, AstNodeType, Range, SourceUnit } from "./hcl";
-import { BlocksSuggestor, FileLevelSuggestor, Suggestor, ToSuggestor } from "./suggestors";
+import { AnyAstNode, AstNodeType, Range, ConfigFile } from "./hcl";
+import { BlockPartsSuggestor, BlocksSuggestor, Suggestor, ToSuggestor } from "./suggestors";
 
 type AstNodeOffsetInclusionChecker = (offset: number, range: Range) => boolean;
 
@@ -13,7 +13,7 @@ const offsetBoundsInclusive: AstNodeOffsetInclusionChecker = (offset, range) => 
 };
 
 const offsetInclusionCheckers: Map<AstNodeType, AstNodeOffsetInclusionChecker> = new Map([
-    [AstNodeType.SourceUnit, offsetBoundsInclusive],
+    [AstNodeType.ConfigFile, offsetBoundsInclusive],
     [AstNodeType.Block, offsetBoundsInclusive],
     [AstNodeType.Body, offsetBoundsExclusive],
     [AstNodeType.Attribute, offsetBoundsInclusive],
@@ -30,14 +30,14 @@ const offsetInclusionCheckers: Map<AstNodeType, AstNodeOffsetInclusionChecker> =
 ]);
 
 const suggestors: Suggestor[] = [
-    new FileLevelSuggestor(),
     new BlocksSuggestor(),
+    new BlockPartsSuggestor(),
     new ToSuggestor()
 ];
 
 export class CompletionService {
-    complete(offset: number, unit: SourceUnit): CompletionItem[] {
-        const nodes = this.getNodesAtOffset(offset, unit).reverse();
+    complete(offset: number, file: ConfigFile): CompletionItem[] {
+        const nodes = this.getNodesAtOffset(offset, file).reverse();
         const result: CompletionItem[] = [];
 
         if (nodes.length === 0) {
@@ -45,17 +45,19 @@ export class CompletionService {
         }
 
         for (const suggestor of suggestors) {
-            if (suggestor.match(nodes)) {
-                result.push(...suggestor.suggest(nodes));
+            const completionItems = suggestor.suggest(nodes);
+
+            if (completionItems) {
+                result.push(...completionItems);
             }
         }
 
         return result;
     }
 
-    getNodesAtOffset(offset: number, unit: SourceUnit): AnyAstNode[] {
+    getNodesAtOffset(offset: number, file: ConfigFile): AnyAstNode[] {
         const result: AnyAstNode[] = [];
-        const queue: AnyAstNode[] = [unit];
+        const queue: AnyAstNode[] = [file];
 
         while (queue.length) {
             const node = queue.shift();
