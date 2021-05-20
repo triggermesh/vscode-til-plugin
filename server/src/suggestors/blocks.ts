@@ -20,7 +20,9 @@ export class BlocksSuggestor implements Suggestor {
             closest instanceof ConfigFile ||
             (closest instanceof Identifier && closest.parent instanceof ConfigFile)
         ) {
-            return this.suggestBlocks(schemas);
+            const mapping = this.createSchemaMapping(schemas);
+
+            return this.suggestBlocks(mapping);
         }
 
         const block = this.getClosestBlockNode(closest) as Block;
@@ -169,8 +171,7 @@ export class BlocksSuggestor implements Suggestor {
         return fragments.join(" ");
     }
 
-    suggestBlocks(schemas: readonly BlockSchema[]): CompletionItem[] {
-        const mapping = this.createSchemaMapping(schemas);
+    suggestBlocks(mapping: Map<string, BlockSnippetParts>): CompletionItem[] {
         const result: CompletionItem[] = [];
 
         for (const [name, parts] of mapping.entries()) {
