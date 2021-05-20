@@ -1,6 +1,6 @@
 import { CompletionItem, CompletionItemKind } from "vscode-languageserver/node";
-import { AnyAstNode, Attribute, Block, Body, Identifier, ConfigFile } from "../hcl";
-import { Suggestor } from "./utils";
+import { Suggestor } from "../completion";
+import { AnyAstNode, Attribute, Block, Body, ConfigFile, Identifier } from "../hcl";
 
 export class ToSuggestor implements Suggestor {
     suggest(nodes: AnyAstNode[]): CompletionItem[] | undefined {
