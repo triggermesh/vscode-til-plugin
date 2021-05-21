@@ -10,7 +10,7 @@ For development you would need following tools:
 - [NodeJS](https://nodejs.org/en/) `^12.0.0`
 - [NPM](https://www.npmjs.com/package/npm) (compatible to installed NodeJS version)
 
-_Consider to use [NVM](https://github.com/nvm-sh/nvm) instead of plain **NodeJS** + **NPM** installation It would make things easier._
+_Consider to use [NVM](https://github.com/nvm-sh/nvm) instead of plain **NodeJS** + **NPM** installation It would make things easier. In case of Windows OS, [consider](https://docs.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows) to use [NVM for Windows](https://github.com/coreybutler/nvm-windows)._
 
 ### Development installation
 
