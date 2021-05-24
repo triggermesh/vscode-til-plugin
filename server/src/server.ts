@@ -13,7 +13,8 @@ import {
     TextDocumentSyncKind
 } from "vscode-languageserver/node";
 import { CompletionService } from "./completion";
-import { AnyAstNode, hclToLspRange, parse, semanticCheck, ConfigFile, SyntaxError } from "./hcl";
+import { DiagnosticsService } from "./diagnostics";
+import { AnyAstNode, ConfigFile, hclToLspRange, parse, SyntaxError } from "./hcl";
 
 const connection = createConnection(ProposedFeatures.all);
 
@@ -87,6 +88,7 @@ const documentSettings: Map<string, Thenable<Settings>> = new Map();
 const documentAsts: Map<string, ConfigFile> = new Map();
 
 const completionService = new CompletionService();
+const diagnosticsService = new DiagnosticsService();
 
 connection.onDidChangeConfiguration((params) => {
     if (hasConfigurationCapability) {
@@ -136,16 +138,9 @@ async function processDocument(textDocument: TextDocument): Promise<void> {
 
         documentAsts.set(textDocument.uri, file);
 
-        const issues = semanticCheck(file).slice(0, settings.maxNumberOfProblems);
+        const issues = diagnosticsService.check(file).slice(0, settings.maxNumberOfProblems);
 
-        diagnostics.push(
-            ...issues.map((issue) => ({
-                severity: DiagnosticSeverity.Error,
-                range: issue.node.getLspRange(),
-                message: issue.message,
-                source: "HCL (semcheck)"
-            }))
-        );
+        diagnostics.push(...issues);
     } catch (e) {
         documentAsts.delete(textDocument.uri);
 
@@ -154,7 +149,7 @@ async function processDocument(textDocument: TextDocument): Promise<void> {
                 severity: DiagnosticSeverity.Error,
                 range: hclToLspRange(e.location),
                 message: e.constructor.name + ": " + e.message,
-                source: "HCL (parser)"
+                source: "vscode-bridge-dl (parser)"
             });
         } else {
             throw e;

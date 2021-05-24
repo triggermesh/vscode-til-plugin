@@ -1,3 +1,4 @@
+import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver/node";
 import {
     AnyAstNode,
     AstNodeType,
@@ -11,18 +12,19 @@ import {
     FunctionCall,
     Identifier,
     IndexAccess
-} from "./nodes";
+} from "../hcl";
+import { DiagnosticChecker } from "./checker";
 
 export interface SemanticIssue {
     node: AnyAstNode;
     message: string;
 }
 
-interface SemanticChecker {
+interface AstNodeSemanticChecker {
     check(node: AnyAstNode): SemanticIssue | SemanticIssue[] | undefined;
 }
 
-class AttributeChecker implements SemanticChecker {
+class AttributeChecker implements AstNodeSemanticChecker {
     check(node: Attribute): SemanticIssue | SemanticIssue[] | undefined {
         if (node.value === undefined) {
             return {
@@ -33,7 +35,7 @@ class AttributeChecker implements SemanticChecker {
     }
 }
 
-class AttributeAccessChecker implements SemanticChecker {
+class AttributeAccessChecker implements AstNodeSemanticChecker {
     check(node: AttributeAccess): SemanticIssue | SemanticIssue[] | undefined {
         if (node.attribute === undefined) {
             return {
@@ -44,7 +46,7 @@ class AttributeAccessChecker implements SemanticChecker {
     }
 }
 
-class IndexAccessChecker implements SemanticChecker {
+class IndexAccessChecker implements AstNodeSemanticChecker {
     check(node: IndexAccess): SemanticIssue | SemanticIssue[] | undefined {
         if (node.index === undefined) {
             return {
@@ -55,7 +57,7 @@ class IndexAccessChecker implements SemanticChecker {
     }
 }
 
-class FunctionCallChecker implements SemanticChecker {
+class FunctionCallChecker implements AstNodeSemanticChecker {
     supported = new Set(["file", "secret_name", "secret_ref"]);
 
     check(node: FunctionCall): SemanticIssue | SemanticIssue[] | undefined {
@@ -70,7 +72,7 @@ class FunctionCallChecker implements SemanticChecker {
     }
 }
 
-class IdentifierChecker implements SemanticChecker {
+class IdentifierChecker implements AstNodeSemanticChecker {
     check(node: Identifier): SemanticIssue[] | undefined {
         const issues = [];
 
@@ -87,7 +89,7 @@ class IdentifierChecker implements SemanticChecker {
     }
 }
 
-const semanticCheckers = new Map<AstNodeType, SemanticChecker>([
+const nodeSemanticCheckers = new Map<AstNodeType, AstNodeSemanticChecker>([
     [AstNodeType.Attribute, new AttributeChecker()],
     [AstNodeType.AttributeAccess, new AttributeAccessChecker()],
     [AstNodeType.IndexAccess, new IndexAccessChecker()],
@@ -95,23 +97,30 @@ const semanticCheckers = new Map<AstNodeType, SemanticChecker>([
     [AstNodeType.Identifier, new IdentifierChecker()]
 ]);
 
-export function semanticCheck(file: ConfigFile): SemanticIssue[] {
-    const issues: SemanticIssue[] = [];
-    const callback: AstWalkCallback = (node) => {
-        const checker = semanticCheckers.get(node.nodeType);
+export class SemanticChecker implements DiagnosticChecker {
+    check(file: ConfigFile): Diagnostic[] {
+        const issues: SemanticIssue[] = [];
+        const callback: AstWalkCallback = (node) => {
+            const checker = nodeSemanticCheckers.get(node.nodeType);
 
-        if (checker) {
-            const result = checker.check(node);
+            if (checker) {
+                const result = checker.check(node);
 
-            if (result instanceof Array) {
-                issues.push(...result);
-            } else if (result !== undefined) {
-                issues.push(result);
+                if (result instanceof Array) {
+                    issues.push(...result);
+                } else if (result !== undefined) {
+                    issues.push(result);
+                }
             }
-        }
-    };
+        };
 
-    file.walk(callback, AstWalkPolicy.Inclusive, AstWalkOrder.ChildrenFirst);
+        file.walk(callback, AstWalkPolicy.Inclusive, AstWalkOrder.ChildrenFirst);
 
-    return issues;
+        return issues.map((issue) => ({
+            severity: DiagnosticSeverity.Error,
+            range: issue.node.getLspRange(),
+            message: issue.message,
+            source: `vscode-bridge-dl (${SemanticChecker.name})`
+        }));
+    }
 }

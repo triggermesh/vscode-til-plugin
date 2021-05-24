@@ -42,10 +42,11 @@ _Consider to use [NVM](https://github.com/nvm-sh/nvm) instead of plain **NodeJS*
 │       │   ├───grammar.pegjs       Language parser grammar (PEG JS)
 │       │   ├───nodes.ts            AST implementation (AST nodes and traversal logic)
 │       │   ├───parser.ts           Produced language parser.
-│       │   ├───parser_header.ts    TypeScript source that is added to beginning of generated parser.
-│       │   └───semantic_check.ts   AST semantic checking and validation logic
+│       │   └───parser_header.ts    TypeScript source that is added to beginning of generated parser.
+│       ├───checkers                Diagnosticts components for AST checking and other validation
 │       ├───suggestors              Completion items suggestion components
 │       ├───completion.ts           BridgeDL completion service
+│       ├───diagnostics.ts          BridgeDL diagnosticts service
 │       ├───schema.ts               BridgeDL blocks schema (blocks and attributes)
 │       └───server.ts               Server entry point
 ├───syntaxes                        TextMate highlighting grammars

@@ -4,9 +4,9 @@ import {
     InsertTextFormat,
     InsertTextMode
 } from "vscode-languageserver/node";
-import { Suggestor } from "../completion";
 import { AnyAstNode, Attribute, Block, Body, ConfigFile, Identifier, StringLiteral } from "../hcl";
 import { BlockSchema, schemas } from "../schema";
+import { Suggestor } from "./suggestor";
 
 interface BlockSnippetParts {
     kind?: string[];

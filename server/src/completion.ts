@@ -1,6 +1,6 @@
-import { CompletionItem } from "vscode-languageserver/node";
-import { AnyAstNode, AstNodeType, Range, ConfigFile } from "./hcl";
-import { BlocksSuggestor, ToSuggestor } from "./suggestors";
+import { CompletionItem } from "vscode-languageserver";
+import { AnyAstNode, AstNodeType, ConfigFile, Range } from "./hcl";
+import { BlocksSuggestor, Suggestor, ToSuggestor } from "./suggestors";
 
 type AstNodeOffsetInclusionChecker = (offset: number, range: Range) => boolean;
 
@@ -28,10 +28,6 @@ const offsetInclusionCheckers: Map<AstNodeType, AstNodeOffsetInclusionChecker> =
     [AstNodeType.AttributeAccess, offsetBoundsInclusive],
     [AstNodeType.FunctionCall, offsetBoundsInclusive]
 ]);
-
-export interface Suggestor {
-    suggest(nodes: AnyAstNode[]): CompletionItem[] | undefined;
-}
 
 const suggestors: Suggestor[] = [new BlocksSuggestor(), new ToSuggestor()];
 
