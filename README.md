@@ -43,7 +43,7 @@ _Consider to use [NVM](https://github.com/nvm-sh/nvm) instead of plain **NodeJS*
 │       │   ├───nodes.ts            AST implementation (AST nodes and traversal logic)
 │       │   ├───parser.ts           Produced language parser.
 │       │   └───parser_header.ts    TypeScript source that is added to beginning of generated parser.
-│       ├───checkers                Diagnosticts components for AST checking and other validation
+│       ├───checkers                Diagnostic components for AST checking and other validation
 │       ├───suggestors              Completion items suggestion components
 │       ├───completion.ts           BridgeDL completion service
 │       ├───diagnostics.ts          BridgeDL diagnosticts service
