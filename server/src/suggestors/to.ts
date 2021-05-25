@@ -7,14 +7,14 @@ export class ToSuggestor implements Suggestor {
         const closest = nodes[0];
         const attribute = this.getClosestAttributeNode(closest);
 
-        if (attribute === undefined || nodes[0] === attribute.name) {
+        if (attribute === undefined || closest === attribute.name) {
             return undefined;
         }
 
-        const file = closest.getRoot() as ConfigFile;
+        const root = closest.getRoot() as ConfigFile;
         const candidates: string[] = [];
 
-        for (const child of file.getChildren()) {
+        for (const child of root.getChildren()) {
             if (!(child instanceof Block && child.labels.length > 1)) {
                 continue;
             }

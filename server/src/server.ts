@@ -12,69 +12,16 @@ import {
     TextDocuments,
     TextDocumentSyncKind
 } from "vscode-languageserver/node";
+import { SemanticChecker } from "./checkers";
 import { CompletionService } from "./completion";
 import { DiagnosticsService } from "./diagnostics";
-import { AnyAstNode, ConfigFile, hclToLspRange, parse, SyntaxError } from "./hcl";
+import { ConfigFile, hclToLspRange, parse, SyntaxError } from "./hcl";
+import { BlocksSuggestor, ToSuggestor } from "./suggestors";
 
 const connection = createConnection(ProposedFeatures.all);
 
-const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
-
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
-let hasDiagnosticRelatedInformationCapability = false;
-
-connection.onInitialize((params: InitializeParams) => {
-    const capabilities = params.capabilities;
-
-    // Does the client support the `workspace/configuration` request?
-    // If not, we fall back using global settings.
-    hasConfigurationCapability = !!(
-        capabilities.workspace && !!capabilities.workspace.configuration
-    );
-
-    hasWorkspaceFolderCapability = !!(
-        capabilities.workspace && !!capabilities.workspace.workspaceFolders
-    );
-
-    hasDiagnosticRelatedInformationCapability = !!(
-        capabilities.textDocument &&
-        capabilities.textDocument.publishDiagnostics &&
-        capabilities.textDocument.publishDiagnostics.relatedInformation
-    );
-
-    const result: InitializeResult = {
-        capabilities: {
-            textDocumentSync: TextDocumentSyncKind.Incremental,
-            completionProvider: {
-                resolveProvider: true,
-                triggerCharacters: ["."]
-            }
-        }
-    };
-
-    if (hasWorkspaceFolderCapability) {
-        result.capabilities.workspace = {
-            workspaceFolders: {
-                supported: true
-            }
-        };
-    }
-
-    return result;
-});
-
-connection.onInitialized(() => {
-    if (hasConfigurationCapability) {
-        connection.client.register(DidChangeConfigurationNotification.type, undefined);
-    }
-
-    if (hasWorkspaceFolderCapability) {
-        connection.workspace.onDidChangeWorkspaceFolders((event) => {
-            connection.console.log("Workspace folder change event received.");
-        });
-    }
-});
 
 interface Settings {
     maxNumberOfProblems: number;
@@ -84,21 +31,12 @@ const defaultSettings: Settings = { maxNumberOfProblems: 100 };
 
 let globalSettings: Settings = defaultSettings;
 
+const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const documentSettings: Map<string, Thenable<Settings>> = new Map();
 const documentAsts: Map<string, ConfigFile> = new Map();
 
-const completionService = new CompletionService();
-const diagnosticsService = new DiagnosticsService();
-
-connection.onDidChangeConfiguration((params) => {
-    if (hasConfigurationCapability) {
-        documentSettings.clear();
-    } else {
-        globalSettings = <Settings>params.settings["vscode-bridge-dl"] || defaultSettings;
-    }
-
-    documents.all().forEach(processDocument);
-});
+const completionService = new CompletionService([new BlocksSuggestor(), new ToSuggestor()]);
+const diagnosticsService = new DiagnosticsService([new SemanticChecker()]);
 
 function getDocumentSettings(resource: string): Thenable<Settings> {
     if (!hasConfigurationCapability) {
@@ -119,26 +57,17 @@ function getDocumentSettings(resource: string): Thenable<Settings> {
     return result;
 }
 
-documents.onDidClose((e) => {
-    documentSettings.delete(e.document.uri);
-    documentAsts.delete(e.document.uri);
-});
-
-documents.onDidChangeContent((e) => {
-    processDocument(e.document);
-});
-
 async function processDocument(textDocument: TextDocument): Promise<void> {
     const settings = await getDocumentSettings(textDocument.uri);
     const source = textDocument.getText();
     const diagnostics: Diagnostic[] = [];
 
     try {
-        const file = parse(source);
+        const ast = parse(source);
 
-        documentAsts.set(textDocument.uri, file);
+        documentAsts.set(textDocument.uri, ast);
 
-        const issues = diagnosticsService.check(file).slice(0, settings.maxNumberOfProblems);
+        const issues = diagnosticsService.check(ast).slice(0, settings.maxNumberOfProblems);
 
         diagnostics.push(...issues);
     } catch (e) {
@@ -159,34 +88,90 @@ async function processDocument(textDocument: TextDocument): Promise<void> {
     connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }
 
+documents.onDidClose((e) => {
+    documentSettings.delete(e.document.uri);
+    documentAsts.delete(e.document.uri);
+});
+
+documents.onDidChangeContent((e) => {
+    processDocument(e.document);
+});
+
+documents.listen(connection);
+
+connection.onInitialize((params: InitializeParams) => {
+    const capabilities = params.capabilities;
+
+    hasConfigurationCapability = !!(
+        capabilities.workspace && !!capabilities.workspace.configuration
+    );
+
+    hasWorkspaceFolderCapability = !!(
+        capabilities.workspace && !!capabilities.workspace.workspaceFolders
+    );
+
+    const result: InitializeResult = {
+        capabilities: {
+            textDocumentSync: TextDocumentSyncKind.Incremental,
+            completionProvider: {
+                triggerCharacters: ["."]
+            }
+        }
+    };
+
+    if (hasWorkspaceFolderCapability) {
+        result.capabilities.workspace = {
+            workspaceFolders: {
+                supported: true
+            }
+        };
+    }
+
+    return result;
+});
+
+connection.onInitialized(() => {
+    if (hasConfigurationCapability) {
+        connection.client.register(DidChangeConfigurationNotification.type, undefined);
+    }
+});
+
+connection.onDidChangeConfiguration((params) => {
+    if (hasConfigurationCapability) {
+        documentSettings.clear();
+    } else {
+        globalSettings = <Settings>params.settings["vscode-bridge-dl"] || defaultSettings;
+    }
+
+    for (const document of documents.all()) {
+        processDocument(document);
+    }
+});
+
 connection.onDidChangeWatchedFiles((params) => {
-    connection.console.log("We received an file change event");
+    for (const e of params.changes) {
+        const document = documents.get(e.uri);
+
+        if (document) {
+            processDocument(document);
+        }
+    }
 });
 
 connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] => {
     const document = documents.get(params.textDocument.uri);
 
-    if (document === undefined) {
-        return [];
+    if (document) {
+        const ast = documentAsts.get(params.textDocument.uri);
+
+        if (ast) {
+            const offset = document.offsetAt(params.position);
+
+            return completionService.complete(offset, ast);
+        }
     }
 
-    const offset = document.offsetAt(params.position);
-    const file = documentAsts.get(params.textDocument.uri);
-
-    return file === undefined ? [] : completionService.complete(offset, file);
+    return [];
 });
-
-connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
-    const data = item.data as AnyAstNode | undefined;
-
-    if (data) {
-        item.detail = data.nodeType;
-        item.documentation = `Defined on line ${data.location.start.line} at column ${data.location.start.column}`;
-    }
-
-    return item;
-});
-
-documents.listen(connection);
 
 connection.listen();

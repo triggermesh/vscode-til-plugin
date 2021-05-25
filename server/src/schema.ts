@@ -1,4 +1,4 @@
-export type AttributeSchema = [string, string];
+export type AttributeSchema = [string, string, string?];
 
 export interface BlockSchema {
     type: string;
@@ -53,7 +53,8 @@ export const routers: readonly BlockSchema[] = [
                     ["to", ""]
                 ]
             }
-        ]
+        ],
+        documentation: "Content-based router"
     },
     {
         type: "router",
@@ -61,9 +62,10 @@ export const routers: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["condition", '"$1"'],
-            ["to", ""]
-        ]
+            ["condition", '"$1"', "Filtering expression"],
+            ["to", "", "Routing destination"]
+        ],
+        documentation: "Router, filtering by certain expression"
     },
     {
         type: "router",
@@ -80,10 +82,12 @@ export const routers: readonly BlockSchema[] = [
                     ["type", '"$1"'],
                     ["source", '"$1"'],
                     ["extensions", "{}"]
-                ]
+                ],
+                documentation: "Context"
             },
-            ["to", ""]
-        ]
+            ["to", "", "Routing destination"]
+        ],
+        documentation: "Splitting router"
     }
 ];
 
