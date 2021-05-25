@@ -14,5 +14,10 @@
     "devDependencies": {
         "@types/vscode": "^1.56.0",
         "vscode-test": "^1.5.2"
+    },
+    "scripts": {
+        "transpile": "tsc",
+        "build": "npm run transpile",
+        "prepare": "npm run build"
     }
 }
