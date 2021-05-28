@@ -466,7 +466,7 @@ export const transformers: readonly BlockSchema[] = [
             ["runtime", '"$1"'],
             ["entrypoint", '"$1"'],
             ["public", "${1|true,false|}"],
-            ["code", 'file("$1")'],
+            ["code", '"<<-EOF\n$1\nEOF"'],
             {
                 type: "ce_context",
                 kindNeeded: false,
