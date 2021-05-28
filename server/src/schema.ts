@@ -488,6 +488,17 @@ export const transformers: readonly BlockSchema[] = [
 export const targets: readonly BlockSchema[] = [
     {
         type: "target",
+        kind: "aws_dynamodb",
+        kindNeeded: true,
+        nameNeeded: true,
+        members: [
+            ["arn", '"$1"'],
+            ["credentials", 'secret_name("$1")'],
+            ["to", ""]
+        ]
+    },
+    {
+        type: "target",
         kind: "aws_kinesis",
         kindNeeded: true,
         nameNeeded: true,
