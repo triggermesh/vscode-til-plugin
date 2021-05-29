@@ -479,7 +479,7 @@ export const targets: readonly BlockSchema[] = [
         members: [
             ["arn", '"$1"'],
             ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            ["reply_to", ""]
         ]
     },
     {
