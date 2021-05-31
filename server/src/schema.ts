@@ -197,24 +197,9 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["region", '"$1"'],
+            ["arn", '"$1"'],
             ["polling_interval", '"$1"'],
-            ["identifier", '"$1"'],
-            ["metric_query", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
-        ]
-    },
-    {
-        type: "source",
-        kind: "aws_pi",
-        kindNeeded: true,
-        nameNeeded: true,
-        members: [
-            ["region", '"$1"'],
-            ["polling_interval", '"$1"'],
-            ["identifier", '"$1"'],
-            ["metric_query", '"$1"'],
+            ["metric_queries", "[\n\t$1\n]"],
             ["credentials", 'secret_name("$1")'],
             ["to", ""]
         ]
@@ -486,6 +471,17 @@ export const transformers: readonly BlockSchema[] = [
  * https://github.com/triggermesh/bridgedl/wiki/Targets
  */
 export const targets: readonly BlockSchema[] = [
+    {
+        type: "target",
+        kind: "aws_dynamodb",
+        kindNeeded: true,
+        nameNeeded: true,
+        members: [
+            ["arn", '"$1"'],
+            ["credentials", 'secret_name("$1")'],
+            ["to", ""]
+        ]
+    },
     {
         type: "target",
         kind: "aws_kinesis",
