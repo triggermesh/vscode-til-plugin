@@ -549,7 +549,15 @@ export const sources: readonly BlockSchema[] = [
             },
             {
                 attributeType: AttributeType.Tuple,
-                name: "event_types"
+                name: "event_types",
+                elements: [
+                    "Microsoft.Storage.BlobCreated",
+                    "Microsoft.Storage.BlobDeleted",
+                    "Microsoft.Storage.BlobRenamed",
+                    "Microsoft.Storage.DirectoryCreated",
+                    "Microsoft.Storage.DirectoryDeleted",
+                    "Microsoft.Storage.DirectoryRenamed"
+                ]
             },
             {
                 attributeType: AttributeType.Custom,
