@@ -1123,7 +1123,7 @@ export const targets: readonly BlockSchema[] = [
             },
             {
                 attributeType: AttributeType.Void,
-                name: "to"
+                name: "reply_to"
             }
         ]
     },
