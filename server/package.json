@@ -16,8 +16,8 @@
         "vscode-languageserver-textdocument": "^1.0.1"
     },
     "devDependencies": {
-        "pegjs": "^0.10.0",
-        "ts-pegjs": "^0.3.1"
+        "peggy": "^1.1.0",
+        "ts-pegjs": "^1.0.0"
     },
     "scripts": {
         "build-parser": "tspegjs -o src/hcl/parser.ts --custom-header-file src/hcl/parser_header.ts --allowed-start-rules ConfigFile --cache src/hcl/grammar.pegjs",

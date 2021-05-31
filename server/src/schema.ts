@@ -1,4 +1,48 @@
-export type AttributeSchema = [string, string, string?];
+export enum AttributeType {
+    Custom = "custom",
+    Boolean = "boolean",
+    Number = "number",
+    Void = "void",
+    String = "string",
+    Tuple = "tuple",
+    Object = "object"
+}
+
+export interface BaseAttributeSchema {
+    attributeType: AttributeType;
+    name: string;
+    documentation?: string;
+}
+
+export interface PrimitiveAttributeSchema extends BaseAttributeSchema {
+    attributeType: AttributeType.Boolean | AttributeType.Number | AttributeType.Void;
+}
+
+export interface StringAttributeSchema extends BaseAttributeSchema {
+    attributeType: AttributeType.String;
+    options?: string[];
+}
+
+export interface TupleAttributeSchema extends BaseAttributeSchema {
+    attributeType: AttributeType.Tuple;
+    elements?: string[];
+}
+
+export interface ObjectAttributeSchema extends BaseAttributeSchema {
+    attributeType: AttributeType.Object;
+}
+
+export interface CustomAttributeSchema extends BaseAttributeSchema {
+    attributeType: AttributeType.Custom;
+    snippet: string;
+}
+
+export type AttributeSchema =
+    | PrimitiveAttributeSchema
+    | StringAttributeSchema
+    | TupleAttributeSchema
+    | ObjectAttributeSchema
+    | CustomAttributeSchema;
 
 export interface BlockSchema {
     type: string;
@@ -26,10 +70,42 @@ export const bridges: readonly BlockSchema[] = [
 export const channels: readonly BlockSchema[] = [
     {
         type: "channel",
+        kind: "point_to_point",
+        kindNeeded: true,
+        nameNeeded: true,
+        members: [
+            {
+                type: "delivery",
+                kindNeeded: false,
+                nameNeeded: false,
+                members: [
+                    {
+                        attributeType: AttributeType.Number,
+                        name: "retries"
+                    },
+                    {
+                        attributeType: AttributeType.Void,
+                        name: "dead_letter_sink"
+                    }
+                ]
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
+        ]
+    },
+    {
+        type: "channel",
         kind: "pubsub",
         kindNeeded: true,
         nameNeeded: true,
-        members: [["subscribers", "[\n\t$1\n]"]]
+        members: [
+            {
+                attributeType: AttributeType.Tuple,
+                name: "subscribers"
+            }
+        ]
     }
 ];
 
@@ -48,9 +124,18 @@ export const routers: readonly BlockSchema[] = [
                 kindNeeded: false,
                 nameNeeded: false,
                 members: [
-                    ["attributes", "{}"],
-                    ["condition ", '"$1"'],
-                    ["to", ""]
+                    {
+                        attributeType: AttributeType.Object,
+                        name: "attributes"
+                    },
+                    {
+                        attributeType: AttributeType.String,
+                        name: "condition"
+                    },
+                    {
+                        attributeType: AttributeType.Void,
+                        name: "to"
+                    }
                 ]
             }
         ],
@@ -62,8 +147,16 @@ export const routers: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["condition", '"$1"', "Filtering expression"],
-            ["to", "", "Routing destination"]
+            {
+                attributeType: AttributeType.String,
+                name: "condition",
+                documentation: "Filtering expression"
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to",
+                documentation: "Routing destination"
+            }
         ],
         documentation: "Router, filtering by certain expression"
     },
@@ -73,19 +166,35 @@ export const routers: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["path", '"$1"'],
+            {
+                attributeType: AttributeType.String,
+                name: "path"
+            },
             {
                 type: "ce_context",
                 kindNeeded: false,
                 nameNeeded: false,
                 members: [
-                    ["type", '"$1"'],
-                    ["source", '"$1"'],
-                    ["extensions", "{}"]
+                    {
+                        attributeType: AttributeType.String,
+                        name: "type"
+                    },
+                    {
+                        attributeType: AttributeType.String,
+                        name: "source"
+                    },
+                    {
+                        attributeType: AttributeType.Object,
+                        name: "extensions"
+                    }
                 ],
                 documentation: "Context"
             },
-            ["to", "", "Routing destination"]
+            {
+                attributeType: AttributeType.Void,
+                name: "to",
+                documentation: "Routing destination"
+            }
         ],
         documentation: "Splitting router"
     }
@@ -101,36 +210,72 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["region", '"$1"'],
-            ["polling_interval", '"$1"'],
+            {
+                attributeType: AttributeType.String,
+                name: "region"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "polling_interval"
+            },
             {
                 type: "metric_query",
                 kindNeeded: false,
                 nameNeeded: true,
                 members: [
-                    ["expression", '"$1"'],
+                    {
+                        attributeType: AttributeType.String,
+                        name: "expression"
+                    },
                     {
                         type: "metric",
                         kindNeeded: false,
                         nameNeeded: false,
                         members: [
-                            ["period", ""],
-                            ["stat", '"$1"'],
-                            ["unit", '"$1"'],
-                            ["name", '"$1"'],
-                            ["namespace", '"$1"'],
+                            {
+                                attributeType: AttributeType.Number,
+                                name: "period"
+                            },
+                            {
+                                attributeType: AttributeType.String,
+                                name: "stat"
+                            },
+                            {
+                                attributeType: AttributeType.String,
+                                name: "unit"
+                            },
+                            {
+                                attributeType: AttributeType.String,
+                                name: "name"
+                            },
+                            {
+                                attributeType: AttributeType.String,
+                                name: "namespace"
+                            },
                             {
                                 type: "dimension",
                                 kindNeeded: false,
                                 nameNeeded: true,
-                                members: [["value", '"$1"']]
+                                members: [
+                                    {
+                                        attributeType: AttributeType.String,
+                                        name: "value"
+                                    }
+                                ]
                             }
                         ]
                     }
                 ]
             },
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -139,10 +284,23 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["polling_interval", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "polling_interval"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -151,11 +309,27 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["branch", '"$1"'],
-            ["event_types", "[\n\t$1\n]"],
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "branch"
+            },
+            {
+                attributeType: AttributeType.Tuple,
+                name: "event_types"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -164,9 +338,19 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -175,9 +359,19 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -186,9 +380,19 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -197,11 +401,40 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["polling_interval", '"$1"'],
-            ["metric_queries", "[\n\t$1\n]"],
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "polling_interval"
+            },
+            {
+                attributeType: AttributeType.Tuple,
+                name: "metric_queries",
+                elements: [
+                    "os.cpuUtilization.idle.avg",
+                    "os.general.numVCPUs.avg",
+                    "os.network.rx.avg",
+                    "os.network.tx.avg",
+                    "os.network.rx.avg",
+                    "os.fileSys.total.avg",
+                    "os.fileSys.used.avg",
+                    "os.memory.active.avg",
+                    "os.memory.total.avg",
+                    "os.tasks.blocked.avg",
+                    "os.tasks.zombie.avg"
+                ]
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -210,10 +443,23 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["event_types", "[\n\t$1\n]"],
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Tuple,
+                name: "event_types"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -222,9 +468,19 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -233,9 +489,19 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -244,11 +510,27 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["event_hub_id", '"$1"'],
-            ["event_hubs_sas_policy", '"$1"'],
-            ["categories", "[\n\t$1\n]"],
-            ["auth", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "event_hub_id"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "event_hubs_sas_policy"
+            },
+            {
+                attributeType: AttributeType.Tuple,
+                name: "categories"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -257,11 +539,27 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["storage_account_id", '"$1"'],
-            ["event_hub_id", '"$1"'],
-            ["event_types", "[\n\t$1\n]"],
-            ["auth", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "storage_account_id"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "event_hub_id"
+            },
+            {
+                attributeType: AttributeType.Tuple,
+                name: "event_types"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -270,10 +568,23 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["hub_namespace", '"$1"'],
-            ["hub_name", '"$1"'],
-            ["auth", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "hub_namespace"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "hub_name"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -282,10 +593,23 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["owner_and_repository", '"$1"'],
-            ["event_types", "[\n\t$1\n]"],
-            ["tokens", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "owner_and_repository"
+            },
+            {
+                attributeType: AttributeType.Tuple,
+                name: "event_types"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "tokens",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -294,12 +618,30 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["endpoint", '"$1"'],
-            ["method", '"$1"'],
-            ["interval", '"$1"'],
-            ["event_type", '"$1"'],
-            ["event_source", '"$1"'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "endpoint"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "method"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "interval"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "event_type"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "event_source"
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -308,12 +650,32 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["topics", "[\n\t$1\n]"],
-            ["bootstrap_servers", "[\n\t$1\n]"],
-            ["consumer_group", '"$1"'],
-            ["sasl_auth", 'secret_name("$1")'],
-            ["tls", '${1|secret_name(""),true|}'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.Tuple,
+                name: "topics"
+            },
+            {
+                attributeType: AttributeType.Tuple,
+                name: "bootstrap_servers"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "consumer_group"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "sasl_auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "tls",
+                snippet: '${1|secret_name(""),true|}'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -322,10 +684,22 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["data", '"$1"'],
-            ["content_type", '"$1"'],
-            ["schedule", '"$1"'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "data"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "content_type"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "schedule"
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -334,13 +708,35 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["channel", '"$1"'],
-            ["replay_id", ""],
-            ["client_id", '"$1"'],
-            ["server", '"$1"'],
-            ["user", '"$1"'],
-            ["secret_key", 'secret_name("$1")'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "channel"
+            },
+            {
+                attributeType: AttributeType.Number,
+                name: "replay_id"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "client_id"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "server"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "user"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "secret_key",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -349,9 +745,19 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["signing_secret", 'secret_name("$1")'],
-            ["app_id", '"$1"'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.Custom,
+                name: "signing_secret",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "app_id"
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -360,11 +766,26 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["event_type", '"$1"'],
-            ["event_source", '"$1"'],
-            ["basic_auth_username", '"$1"'],
-            ["basic_auth_password", '"$1"'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "event_type"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "event_source"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "basic_auth_username"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "basic_auth_password"
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -373,12 +794,31 @@ export const sources: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["subdomain", '"$1"'],
-            ["email", '"$1"'],
-            ["api_auth", 'secret_name("$1")'],
-            ["webhook_username", '"$1"'],
-            ["webhook_password", '"$1"'],
-            ["to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "subdomain"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "email"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "api_auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "webhook_username"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "webhook_password"
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     }
 ];
@@ -408,8 +848,14 @@ export const transformers: readonly BlockSchema[] = [
                                 kindNeeded: false,
                                 nameNeeded: false,
                                 members: [
-                                    ["key", '"$1"'],
-                                    ["value", '"$1"']
+                                    {
+                                        attributeType: AttributeType.String,
+                                        name: "key"
+                                    },
+                                    {
+                                        attributeType: AttributeType.String,
+                                        name: "value"
+                                    }
                                 ]
                             }
                         ]
@@ -431,15 +877,24 @@ export const transformers: readonly BlockSchema[] = [
                                 kindNeeded: false,
                                 nameNeeded: false,
                                 members: [
-                                    ["key", '"$1"'],
-                                    ["value", '"$1"']
+                                    {
+                                        attributeType: AttributeType.String,
+                                        name: "key"
+                                    },
+                                    {
+                                        attributeType: AttributeType.String,
+                                        name: "value"
+                                    }
                                 ]
                             }
                         ]
                     }
                 ]
             },
-            ["to", ""]
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     },
     {
@@ -448,21 +903,46 @@ export const transformers: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["runtime", '"$1"'],
-            ["entrypoint", '"$1"'],
-            ["public", "${1|true,false|}"],
-            ["code", 'file("$1")'],
+            {
+                attributeType: AttributeType.String,
+                name: "runtime"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "entrypoint"
+            },
+            {
+                attributeType: AttributeType.Boolean,
+                name: "public"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "code",
+                snippet: "<<-EOF\n$1\nEOF"
+            },
             {
                 type: "ce_context",
                 kindNeeded: false,
                 nameNeeded: false,
                 members: [
-                    ["type", '"$1"'],
-                    ["source", '"$1"'],
-                    ["subject", '"$1"']
+                    {
+                        attributeType: AttributeType.String,
+                        name: "type"
+                    },
+                    {
+                        attributeType: AttributeType.String,
+                        name: "source"
+                    },
+                    {
+                        attributeType: AttributeType.String,
+                        name: "subject"
+                    }
                 ]
             },
-            ["to", ""]
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
         ]
     }
 ];
@@ -477,9 +957,19 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -488,10 +978,23 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["partition", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "partition"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -500,9 +1003,19 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -511,9 +1024,19 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -522,9 +1045,19 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -533,9 +1066,19 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["arn", '"$1"'],
-            ["credentials", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "arn"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "credentials",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -544,15 +1087,29 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["image", '"$1"'],
-            ["public", "${1|true,false|}"],
+            {
+                attributeType: AttributeType.String,
+                name: "image"
+            },
+            {
+                attributeType: AttributeType.Boolean,
+                name: "public"
+            },
             {
                 type: "env_var",
                 kindNeeded: false,
                 nameNeeded: true,
-                members: [["value", '"$1"']]
+                members: [
+                    {
+                        attributeType: AttributeType.String,
+                        name: "value"
+                    }
+                ]
             },
-            ["env_vars", "{ NAME: VALUE }"]
+            {
+                attributeType: AttributeType.Object,
+                name: "env_vars"
+            }
         ]
     },
     {
@@ -561,9 +1118,19 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["metric_prefix", '"$1"'],
-            ["auth", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "metric_prefix"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -579,21 +1146,46 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["runtime", '"$1"'],
-            ["entrypoint", '"$1"'],
-            ["public", "${1|true,false|}"],
-            ["code", 'file("$1")'],
+            {
+                attributeType: AttributeType.String,
+                name: "runtime"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "entrypoint"
+            },
+            {
+                attributeType: AttributeType.Boolean,
+                name: "public"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "code",
+                snippet: "<<-EOF\n$1\nEOF"
+            },
             {
                 type: "ce_context",
                 kindNeeded: false,
                 nameNeeded: false,
                 members: [
-                    ["type", '"$1"'],
-                    ["source", '"$1"'],
-                    ["subject", '"$1"']
+                    {
+                        attributeType: AttributeType.String,
+                        name: "type"
+                    },
+                    {
+                        attributeType: AttributeType.String,
+                        name: "source"
+                    },
+                    {
+                        attributeType: AttributeType.String,
+                        name: "subject"
+                    }
                 ]
             },
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -602,9 +1194,19 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["bucket_name", '"$1"'],
-            ["service_account", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "bucket_name"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "service_account",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -613,10 +1215,23 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["topic", '"$1"'],
-            ["bootstrap_servers", "[\n\t$1\n]"],
-            ["auth", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "topic"
+            },
+            {
+                attributeType: AttributeType.Tuple,
+                name: "bootstrap_servers"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -625,9 +1240,19 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["logs_listener_url", '"$1"'],
-            ["auth", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "logs_listener_url"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -636,13 +1261,35 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["default_from_email", '"$1"'],
-            ["default_from_name", '"$1"'],
-            ["default_to_email", '"$1"'],
-            ["default_to_name", '"$1"'],
-            ["default_subject", '"$1"'],
-            ["auth", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "default_from_email"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "default_from_name"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "default_to_email"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "default_to_name"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "default_subject"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -651,8 +1298,15 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["auth", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.Custom,
+                name: "auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -668,11 +1322,27 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["endpoint", '"$1"'],
-            ["index", '"$1"'],
-            ["skip_tls_verify", "${1|true,false|}"],
-            ["auth", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "endpoint"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "index"
+            },
+            {
+                attributeType: AttributeType.Boolean,
+                name: "skip_tls_verify"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -681,10 +1351,23 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["default_phone_from", '"$1"'],
-            ["default_phone_to", '"$1"'],
-            ["auth", 'secret_name("$1")'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "default_phone_from"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "default_phone_to"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     },
     {
@@ -693,11 +1376,27 @@ export const targets: readonly BlockSchema[] = [
         kindNeeded: true,
         nameNeeded: true,
         members: [
-            ["subdomain", '"$1"'],
-            ["email", '"$1"'],
-            ["api_auth", 'secret_name("$1")'],
-            ["subject", '"$1"'],
-            ["reply_to", ""]
+            {
+                attributeType: AttributeType.String,
+                name: "subdomain"
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "email"
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "api_auth",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.String,
+                name: "subject"
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "reply_to"
+            }
         ]
     }
 ];
