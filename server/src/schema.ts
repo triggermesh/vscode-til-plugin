@@ -614,6 +614,44 @@ export const sources: readonly BlockSchema[] = [
     },
     {
         type: "source",
+        kind: "gitlab",
+        kindNeeded: true,
+        nameNeeded: true,
+        members: [
+            {
+                attributeType: AttributeType.String,
+                name: "project_url"
+            },
+            {
+                attributeType: AttributeType.Tuple,
+                name: "event_types",
+                elements: [
+                    "confidential_issues_events",
+                    "confidential_note_events",
+                    "deployment_events",
+                    "issues_events",
+                    "job_events",
+                    "merge_requests_events",
+                    "note_events",
+                    "pipeline_events",
+                    "push_events",
+                    "tag_push_events",
+                    "wiki_page_events"
+                ]
+            },
+            {
+                attributeType: AttributeType.Custom,
+                name: "tokens",
+                snippet: 'secret_name("$1")'
+            },
+            {
+                attributeType: AttributeType.Void,
+                name: "to"
+            }
+        ]
+    },
+    {
+        type: "source",
         kind: "httppoller",
         kindNeeded: true,
         nameNeeded: true,
