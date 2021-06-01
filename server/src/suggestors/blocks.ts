@@ -6,24 +6,10 @@ import {
     MarkupContent,
     MarkupKind
 } from "vscode-languageserver/node";
-import {
-    AnyAstNode,
-    Attribute,
-    Block,
-    Body,
-    ConfigFile,
-    Identifier,
-    StringLiteral,
-    Tuple
-} from "../hcl";
-import { AttributeSchema, AttributeType, BlockSchema, schemas } from "../schema";
+import { AnyAstNode, Attribute, Block, ConfigFile, Identifier, StringLiteral, Tuple } from "../hcl";
+import { AttributeSchema, BlockSchema, schemas, ValueSchema, ValueType } from "../schema";
 import { Suggestor } from "./suggestor";
-
-type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType extends ReadonlyArray<
-    infer ElementType
->
-    ? ElementType
-    : never;
+import { getBodyMemberName, getScopedSchemas, isAttributeSchema, matchSchema } from "./utils";
 
 interface BlockSnippetParts {
     nameNeeded: boolean;
@@ -52,7 +38,7 @@ export class BlocksSuggestor implements Suggestor {
             return undefined;
         }
 
-        const scopedSchemas = this.getScopedSchemas(block, schemas);
+        const scopedSchemas = getScopedSchemas(block, schemas);
 
         if (closest === block.type) {
             return this.suggestTypes(closest, scopedSchemas);
@@ -62,7 +48,7 @@ export class BlocksSuggestor implements Suggestor {
             return this.suggestKinds(block, closest, scopedSchemas);
         }
 
-        const schema = this.matchSchema(block, scopedSchemas);
+        const schema = matchSchema(block, scopedSchemas);
 
         if (schema === undefined) {
             return undefined;
@@ -77,109 +63,44 @@ export class BlocksSuggestor implements Suggestor {
         );
 
         if (attribute && closest !== attribute.name) {
-            return this.suggestValue(attribute, closest, schema);
+            return this.suggestAttributeValue(attribute, closest, schema);
         }
 
         return undefined;
     }
 
-    private getScopedSchemas(
-        block: Block,
-        schemas: readonly BlockSchema[]
-    ): readonly BlockSchema[] {
-        const parents = block.getParentsBySelector<Block>((node) => node instanceof Block);
-
-        let result: readonly BlockSchema[] = schemas;
-
-        while (parents.length) {
-            const parent = parents.pop();
-
-            if (parent === undefined) {
-                break;
-            }
-
-            const schema = this.matchSchema(parent, result);
-
-            if (schema === undefined || schema.members === undefined) {
-                break;
-            }
-
-            result = schema.members.filter(
-                (member): member is BlockSchema => !("attributeType" in member)
-            );
-
-            if (result.length === 0) {
-                break;
-            }
-        }
-
-        return result;
-    }
-
-    private matchSchema(block: Block, schemas: readonly BlockSchema[]): BlockSchema | undefined {
-        const type = block.type.name;
-        const firstLabel = block.labels.length > 0 ? block.labels[0] : undefined;
-
-        let kind: string | undefined;
-
-        if (firstLabel) {
-            kind = firstLabel instanceof Identifier ? firstLabel.name : firstLabel.value;
-        }
-
-        for (const schema of schemas) {
-            if (schema.type === type && (!schema.kindNeeded || schema.kind === kind)) {
-                return schema;
-            }
-        }
-
-        return undefined;
-    }
-
-    private getBodyMemberName(node: ArrayElement<Body["members"]>): string {
-        if (node instanceof Attribute) {
-            return node.name.name;
-        }
-
-        if (node instanceof Block) {
-            return node.type.name;
-        }
-
-        return node.name;
-    }
-
-    private buildValueSnippet(schema: AttributeSchema): string {
-        if (schema.attributeType === AttributeType.Custom) {
+    private buildValueSnippet(schema: ValueSchema): string {
+        if (schema.type === ValueType.Custom) {
             return schema.snippet;
         }
 
-        if (schema.attributeType === AttributeType.Boolean) {
+        if (schema.type === ValueType.Boolean) {
             return "${1|true,false|}";
         }
 
-        if (
-            schema.attributeType === AttributeType.Number ||
-            schema.attributeType === AttributeType.Void
-        ) {
+        if (schema.type === ValueType.Number || schema.type === ValueType.ComponentReference) {
             return "";
         }
 
-        if (schema.attributeType === AttributeType.String) {
-            return schema.options ? `"\${1|${schema.options.join(",")}|}"` : '"$1"';
+        if (schema.type === ValueType.String) {
+            return schema.options && schema.options.length > 0
+                ? `"\${1|${schema.options.join(",")}|}"`
+                : '"$1"';
         }
 
-        if (schema.attributeType === AttributeType.Object) {
+        if (schema.type === ValueType.Object) {
             return "{}";
         }
 
-        if (schema.attributeType === AttributeType.Tuple) {
+        if (schema.type === ValueType.Tuple) {
             return "[]";
         }
 
-        throw new Error("Unsupported attribute type in schema: " + schema.attributeType);
+        throw new Error("Unsupported value type in schema: " + schema.type);
     }
 
     private buildAttributeSnippet(schema: AttributeSchema): string {
-        return schema.name + " = " + this.buildValueSnippet(schema);
+        return schema.name + " = " + this.buildValueSnippet(schema.value);
     }
 
     private buildBlockSnippetParts(
@@ -338,7 +259,8 @@ export class BlocksSuggestor implements Suggestor {
         for (const schema of schemas) {
             if (
                 schema.type === type &&
-                schema.kind !== undefined &&
+                schema.kindNeeded &&
+                schema.kind &&
                 !candidates.some((candidate) => candidate.kind === schema.kind)
             ) {
                 candidates.push(schema);
@@ -366,10 +288,10 @@ export class BlocksSuggestor implements Suggestor {
 
         const result: CompletionItem[] = [];
         const mapping = new Map<string, BlockSnippetParts>();
-        const memberNames = block.body.members.map(this.getBodyMemberName);
+        const memberNames = block.body.members.map(getBodyMemberName);
 
         for (const member of schema.members) {
-            if ("attributeType" in member) {
+            if (isAttributeSchema(member)) {
                 if (memberNames.includes(member.name)) {
                     continue;
                 }
@@ -394,29 +316,36 @@ export class BlocksSuggestor implements Suggestor {
         return result;
     }
 
-    private suggestValue(
+    private suggestAttributeValue(
         attribute: Attribute,
         closest: AnyAstNode,
-        schema: BlockSchema
+        blockSchema: BlockSchema
     ): CompletionItem[] | undefined {
-        if (schema.members === undefined || attribute.value === undefined) {
+        if (blockSchema.members === undefined || attribute.value === undefined) {
             return undefined;
         }
 
-        const attrSchema = schema.members.find<AttributeSchema>(
+        const attributeName = getBodyMemberName(attribute);
+        const attributeSchema = blockSchema.members.find(
             (member: BlockSchema | AttributeSchema): member is AttributeSchema => {
-                return "name" in member && member.name === attribute.name.name;
+                return isAttributeSchema(member) && member.name === attributeName;
             }
         );
 
-        if (attrSchema === undefined) {
+        if (attributeSchema === undefined) {
             return undefined;
         }
 
-        if (attrSchema.attributeType === AttributeType.String && attrSchema.options) {
-            const replaceRange = attribute.value.getLspRange();
+        const valueSchema = attributeSchema.value;
 
-            return attrSchema.options.map((option) => ({
+        if (
+            valueSchema.type === ValueType.String &&
+            valueSchema.options &&
+            attribute.value === closest
+        ) {
+            const replaceRange = closest.getLspRange();
+
+            return valueSchema.options.map((option) => ({
                 label: `"${option}"`,
                 kind: CompletionItemKind.Text,
                 textEdit: {
@@ -427,11 +356,42 @@ export class BlocksSuggestor implements Suggestor {
         }
 
         if (
-            attrSchema.attributeType === AttributeType.Tuple &&
-            attrSchema.elements &&
+            valueSchema.type === ValueType.ComponentReference &&
+            closest.getParentsBySelector((node) => node === attribute.value)
+        ) {
+            const root = closest.getRoot() as ConfigFile;
+            const candidates: string[] = [];
+
+            for (const child of root.getChildren()) {
+                if (child instanceof Block && child.labels.length > 1) {
+                    const nameLabel = child.labels[1];
+                    const name = nameLabel instanceof Identifier ? nameLabel.name : nameLabel.value;
+                    const candidate = child.type.name + "." + name;
+
+                    if (!candidates.includes(candidate)) {
+                        candidates.push(candidate);
+                    }
+                }
+            }
+
+            const replaceRange = attribute.value.getLspRange();
+
+            return candidates.map((candidate) => ({
+                label: candidate,
+                kind: CompletionItemKind.Property,
+                textEdit: {
+                    range: replaceRange,
+                    newText: candidate
+                }
+            }));
+        }
+
+        if (
+            valueSchema.type === ValueType.Tuple &&
+            valueSchema.elements &&
             closest instanceof Tuple
         ) {
-            return attrSchema.elements.map((element) => ({
+            return valueSchema.elements.map((element) => ({
                 label: `"${element}"`,
                 kind: CompletionItemKind.Property,
 
