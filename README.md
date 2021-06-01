@@ -38,16 +38,16 @@ _Consider to use [NVM](https://github.com/nvm-sh/nvm) instead of plain **NodeJS*
 ├───server                          Language server (backend)
 │   ├───out                         Produced server (JavaScript)
 │   └───src                         Extension sources (TypeScript)
+│       ├───checkers                Diagnostic components for AST checking and other validation
 │       ├───hcl                     HCL language parser and AST
 │       │   ├───grammar.pegjs       Language parser grammar (PEG)
 │       │   ├───nodes.ts            AST implementation (AST nodes and traversal logic)
 │       │   ├───parser.ts           Produced language parser.
 │       │   └───parser_header.ts    TypeScript source that is added to beginning of generated parser.
-│       ├───checkers                Diagnostic components for AST checking and other validation
+│       ├───schema                  BridgeDL schema (blocks and attributes)
 │       ├───suggestors              Completion items suggestion components
 │       ├───completion.ts           BridgeDL completion service
 │       ├───diagnostics.ts          BridgeDL diagnostics service
-│       ├───schema.ts               BridgeDL blocks schema (blocks and attributes)
 │       └───server.ts               Server entry point
 ├───syntaxes                        TextMate highlighting grammars
 │   └───hcl.tmLanguage.json         HCL language highlighting grammar
