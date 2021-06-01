@@ -16,7 +16,7 @@ import { SemanticChecker } from "./checkers";
 import { CompletionService } from "./completion";
 import { DiagnosticsService } from "./diagnostics";
 import { ConfigFile, hclToLspRange, parse, SyntaxError } from "./hcl";
-import { BlocksSuggestor, ToSuggestor } from "./suggestors";
+import { BlocksSuggestor } from "./suggestors";
 
 const connection = createConnection(ProposedFeatures.all);
 
@@ -35,7 +35,7 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const documentSettings: Map<string, Thenable<Settings>> = new Map();
 const documentAsts: Map<string, ConfigFile> = new Map();
 
-const completionService = new CompletionService([new BlocksSuggestor(), new ToSuggestor()]);
+const completionService = new CompletionService([new BlocksSuggestor()]);
 const diagnosticsService = new DiagnosticsService([new SemanticChecker()]);
 
 function getDocumentSettings(resource: string): Thenable<Settings> {
