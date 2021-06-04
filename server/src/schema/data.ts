@@ -908,6 +908,18 @@ export const sources: readonly BlockSchema[] = [
     },
     {
         type: "source",
+        kind: "twilio",
+        kindNeeded: true,
+        nameNeeded: true,
+        members: [
+            {
+                name: "to",
+                value: { type: ValueType.ComponentReference }
+            }
+        ]
+    },
+    {
+        type: "source",
         kind: "webhook",
         kindNeeded: true,
         nameNeeded: true,
