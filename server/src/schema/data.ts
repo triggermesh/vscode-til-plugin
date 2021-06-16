@@ -1356,6 +1356,37 @@ export const targets: readonly BlockSchema[] = [
     },
     {
         type: "target",
+        kind: "gcloud_bigquery",
+        kindNeeded: true,
+        nameNeeded: true,
+        members: [
+            {
+                name: "default_dataset",
+                value: { type: ValueType.String }
+            },
+            {
+                name: "default_table_name",
+                value: { type: ValueType.String }
+            },
+            {
+                name: "project_id",
+                value: { type: ValueType.String }
+            },
+            {
+                name: "service_account",
+                value: {
+                    type: ValueType.Custom,
+                    snippet: 'secret_name("$1")'
+                }
+            },
+            {
+                name: "reply_to",
+                value: { type: ValueType.ComponentReference }
+            }
+        ]
+    },
+    {
+        type: "target",
         kind: "gcloud_storage",
         kindNeeded: true,
         nameNeeded: true,
