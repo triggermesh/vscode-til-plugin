@@ -1276,6 +1276,29 @@ export const targets: readonly BlockSchema[] = [
     },
     {
         type: "target",
+        kind: "cockroach",
+        kindNeeded: true,
+        nameNeeded: true,
+        members: [
+            {
+                name: "default_table_name",
+                value: { type: ValueType.String }
+            },
+            {
+                name: "connection_string",
+                value: {
+                    type: ValueType.Custom,
+                    snippet: 'secret_name("$1")'
+                }
+            },
+            {
+                name: "reply_to",
+                value: { type: ValueType.ComponentReference }
+            }
+        ]
+    },
+    {
+        type: "target",
         kind: "datadog",
         kindNeeded: true,
         nameNeeded: true,
