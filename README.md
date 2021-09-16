@@ -1,6 +1,6 @@
-# vscode-bridge-dl
+# vscode-til-dl
 
-An extension for TriggerMesh bridge description language.
+An extension for TriggerMesh Integration Language (TIL).
 
 ## Development
 ### Development prerequisites
