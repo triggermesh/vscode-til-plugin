@@ -1,6 +1,6 @@
-# vscode-bridge-dl
+# vscode-til-dl
 
-An extension for TriggerMesh bridge description language.
+An extension for TriggerMesh Integration Language (TIL).
 
 ## Development
 ### Development prerequisites
@@ -44,10 +44,10 @@ _Consider to use [NVM](https://github.com/nvm-sh/nvm) instead of plain **NodeJS*
 │       │   ├───nodes.ts            AST implementation (AST nodes and traversal logic)
 │       │   ├───parser.ts           Produced language parser.
 │       │   └───parser_header.ts    TypeScript source that is added to beginning of generated parser.
-│       ├───schema                  BridgeDL schema (blocks and attributes)
+│       ├───schema                  TIL schema (blocks and attributes)
 │       ├───suggestors              Completion items suggestion components
-│       ├───completion.ts           BridgeDL completion service
-│       ├───diagnostics.ts          BridgeDL diagnostics service
+│       ├───completion.ts           TIL completion service
+│       ├───diagnostics.ts          TIL diagnostics service
 │       └───server.ts               Server entry point
 ├───syntaxes                        TextMate highlighting grammars
 │   └───hcl.tmLanguage.json         HCL language highlighting grammar

@@ -1,12 +1,12 @@
 {
-    "name": "vscode-bridge-dl",
+    "name": "vscode-til-plugin",
     "description": "An extension for TriggerMesh bridge description language",
     "author": "The TriggerMesh Team",
     "license": "MIT",
     "version": "1.0.0",
     "repository": {
         "type": "git",
-        "url": "https://github.com/TriggerMesh/vscode-bridge-dl"
+        "url": "https://github.com/triggermesh/vscode-til-plugin"
     },
     "publisher": "???",
     "categories": [],
