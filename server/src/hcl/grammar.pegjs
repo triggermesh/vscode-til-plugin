@@ -2,7 +2,7 @@
 // https://github.com/apiaryio/blueprint-parser/blob/master/src/apiary-blueprint-parser.pegjs
 // https://www.andreas-rozek.de/PEG.js/index_en.html
 // https://github.com/ConsenSys/scribble/blob/develop/src/spec-lang/expr_grammar.pegjs
-// https://github.com/triggermesh/bridgedl/blob/main/docs/samples/cloud_storage/s3_blob_to_slack.brg.hcl
+// https://github.com/triggermesh/vscode-til-plugin/blob/main/docs/samples/cloud_storage/s3_blob_to_slack.brg.hcl
 
 // Entry
 // ==========================
