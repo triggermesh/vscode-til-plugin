@@ -1406,6 +1406,25 @@ export const targets: readonly BlockSchema[] = [
     },
     {
         type: "target",
+        kind: "gcloud_workflows",
+        kindNeeded: true,
+        nameNeeded: true,
+        members: [
+            {
+                name: "service_account",
+                value: {
+                    type: ValueType.Custom,
+                    snippet: 'secret_name("$1")'
+                }
+            },
+            {
+                name: "reply_to",
+                value: { type: ValueType.ComponentReference }
+            }
+        ]
+    },
+    {
+        type: "target",
         kind: "kafka",
         kindNeeded: true,
         nameNeeded: true,
