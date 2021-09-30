@@ -1,7 +1,7 @@
 import { BlockSchema, ValueType } from "./types";
 
 /**
- * https://github.com/triggermesh/bridgedl/wiki
+ * https://github.com/triggermesh/vscode-til-plugin/wiki
  */
 export const bridges: readonly BlockSchema[] = [
     {
@@ -12,7 +12,7 @@ export const bridges: readonly BlockSchema[] = [
 ];
 
 /**
- * https://github.com/triggermesh/bridgedl/wiki/Channels
+ * https://github.com/triggermesh/vscode-til-plugin/wiki/Channels
  */
 export const channels: readonly BlockSchema[] = [
     {
@@ -57,7 +57,7 @@ export const channels: readonly BlockSchema[] = [
 ];
 
 /**
- * https://github.com/triggermesh/bridgedl/wiki/Routers
+ * https://github.com/triggermesh/vscode-til-plugin/wiki/Routers
  */
 export const routers: readonly BlockSchema[] = [
     {
@@ -148,7 +148,7 @@ export const routers: readonly BlockSchema[] = [
 ];
 
 /**
- * https://github.com/triggermesh/bridgedl/wiki/Sources
+ * https://github.com/triggermesh/vscode-til-plugin/wiki/Sources
  */
 export const sources: readonly BlockSchema[] = [
     {
@@ -972,7 +972,7 @@ export const sources: readonly BlockSchema[] = [
 ];
 
 /**
- * https://github.com/triggermesh/bridgedl/wiki/Transformers
+ * https://github.com/triggermesh/vscode-til-plugin/wiki/Transformers
  */
 export const transformers: readonly BlockSchema[] = [
     {
@@ -1098,9 +1098,36 @@ export const transformers: readonly BlockSchema[] = [
 ];
 
 /**
- * https://github.com/triggermesh/bridgedl/wiki/Targets
+ * https://github.com/triggermesh/vscode-til-plugin/wiki/Targets
  */
 export const targets: readonly BlockSchema[] = [
+    {
+        type: "target",
+        kind: "aws_comprehend",
+        kindNeeded: true,
+        nameNeeded: true,
+        members: [
+            {
+                name: "region",
+                value: { type: ValueType.String }
+            },
+            {
+                name: "language",
+                value: { type: ValueType.String }
+            },
+            {
+                name: "credentials",
+                value: {
+                    type: ValueType.Custom,
+                    snippet: 'secret_name("$1")'
+                }
+            },
+            {
+                name: "reply_to",
+                value: { type: ValueType.ComponentReference }
+            }
+        ]
+    },
     {
         type: "target",
         kind: "aws_dynamodb",
@@ -1406,6 +1433,25 @@ export const targets: readonly BlockSchema[] = [
     },
     {
         type: "target",
+        kind: "gcloud_workflows",
+        kindNeeded: true,
+        nameNeeded: true,
+        members: [
+            {
+                name: "service_account",
+                value: {
+                    type: ValueType.Custom,
+                    snippet: 'secret_name("$1")'
+                }
+            },
+            {
+                name: "reply_to",
+                value: { type: ValueType.ComponentReference }
+            }
+        ]
+    },
+    {
+        type: "target",
         kind: "kafka",
         kindNeeded: true,
         nameNeeded: true,
@@ -1611,7 +1657,7 @@ export const targets: readonly BlockSchema[] = [
 ];
 
 /**
- * https://github.com/triggermesh/bridgedl/wiki
+ * https://github.com/triggermesh/vscode-til-plugin/wiki
  */
 export const schemas: readonly BlockSchema[] = [
     ...bridges,

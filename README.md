@@ -1,6 +1,6 @@
-# vscode-bridge-dl
+# vscode-til-dl
 
-An extension for TriggerMesh bridge description language.
+An extension for TriggerMesh Integration Language (TIL).
 
 ## Development
 ### Development prerequisites
@@ -44,10 +44,10 @@ _Consider to use [NVM](https://github.com/nvm-sh/nvm) instead of plain **NodeJS*
 │       │   ├───nodes.ts            AST implementation (AST nodes and traversal logic)
 │       │   ├───parser.ts           Produced language parser.
 │       │   └───parser_header.ts    TypeScript source that is added to beginning of generated parser.
-│       ├───schema                  BridgeDL schema (blocks and attributes)
+│       ├───schema                  TIL schema (blocks and attributes)
 │       ├───suggestors              Completion items suggestion components
-│       ├───completion.ts           BridgeDL completion service
-│       ├───diagnostics.ts          BridgeDL diagnostics service
+│       ├───completion.ts           TIL completion service
+│       ├───diagnostics.ts          TIL diagnostics service
 │       └───server.ts               Server entry point
 ├───syntaxes                        TextMate highlighting grammars
 │   └───hcl.tmLanguage.json         HCL language highlighting grammar
@@ -63,3 +63,16 @@ Following approach is used for implementation:
 - Produced AST is processed:
   - Passed to [diagnostic service](https://github.com/triggermesh/vscode-bridge-dl/blob/main/server/src/diagnostics.ts) to inform client about semantic issues: relaxed grammar elements that are not applicable to production, misused code entities. Diagnostic components are located in directory [`checkers/`](https://github.com/triggermesh/vscode-bridge-dl/tree/main/server/src/checkers).
   - Passed to [completion service](https://github.com/triggermesh/vscode-bridge-dl/blob/main/server/src/completion.ts) alongside with cursor position if there is a completion request. Completion suggestions are produced, considering [defined schema](https://github.com/triggermesh/vscode-bridge-dl/blob/main/server/src/schema/data.ts). Completion components are located in directory [`suggestors/`](https://github.com/triggermesh/vscode-bridge-dl/tree/main/server/src/suggestors).
+
+
+## Contributions and support
+
+We would love to hear your feedback on this plugin. Please don't hesitate to submit bug reports and suggestions by
+[filing issues][gh-issue], or contribute by [submitting pull-requests][gh-pr].
+
+## Code of Conduct
+
+This plugin is by no means part of [CNCF](https://www.cncf.io/) but we abide by its [code of conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md)
+
+[gh-issue]: https://github.com/triggermesh/vscode-til-plugin/issues
+[gh-pr]: https://github.com/triggermesh/vscode-til-plugin/pulls
